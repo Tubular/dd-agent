@@ -340,6 +340,11 @@ class MongoDb(AgentCheck):
         'collection.size': GAUGE,
         'collection.avgObjSize': GAUGE,
         'collection.count': GAUGE,
+        'collection.capped': GAUGE,
+        'collection.max': GAUGE,
+        'collection.maxSize': GAUGE,
+        'collection.storageSize': GAUGE,
+        'collection.nindexes': GAUGE,
     }
 
     """
