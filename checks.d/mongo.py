@@ -336,7 +336,6 @@ class MongoDb(AgentCheck):
     }
 
     COLLECTION_METRICS = {
-        'collection.totalIndexSize': GAUGE,
         'collection.size': GAUGE,
         'collection.avgObjSize': GAUGE,
         'collection.count': GAUGE,
@@ -345,6 +344,7 @@ class MongoDb(AgentCheck):
         'collection.maxSize': GAUGE,
         'collection.storageSize': GAUGE,
         'collection.nindexes': GAUGE,
+        'collection.indexSizes': GAUGE,
     }
 
     """
@@ -897,9 +897,9 @@ class MongoDb(AgentCheck):
                 collection_metrics.append(m.split('.')[1:])
 
             for coll_name in coll_names:
-                coll_tags = tags + ["db:%s" % db_name, "collection:%s" % coll_name]
                 stats = db.command("collstats", coll_name)
                 for m in collection_metrics:
+                    coll_tags = tags + ["db:%s" % db_name, "collection:%s" % coll_name]
                     value = None
                     try:
                         for c in m:
@@ -910,7 +910,16 @@ class MongoDb(AgentCheck):
                     except Exception:
                         continue
 
-                    submit_method, metric_name_alias = self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
+                    if isinstance(value, dict):
+                        for (idx, val) in value.iteritems():
+                            idx_tags = coll_tags + ["index:%s" % idx]
+
+                            submit_method, metric_name_alias = \
+                                self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
+                            submit_method(self, metric_name_alias, val, tags=idx_tags)
+
+                    submit_method, metric_name_alias = \
+                        self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
                     submit_method(self, metric_name_alias, value, tags=coll_tags)
         except Exception as e:
             self.log.exception(e)
