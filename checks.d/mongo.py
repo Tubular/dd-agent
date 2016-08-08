@@ -887,14 +887,26 @@ class MongoDb(AgentCheck):
         try:
             db = cli[db_name]
             coll_names = db.collection_names()
-            collection_metrics = ['totalIndexSize','size','avgObjSize','count',]
+            collection_metrics = []
+            for m in self.COLLECTION_METRICS:
+                collection_metrics.append(m.split('.')[1:])
 
             for coll_name in coll_names:
                 coll_tags = tags + ["db:%s" % db_name, "collection:%s" % coll_name]
                 stats = db.command("collstats", coll_name)
                 for m in collection_metrics:
-                    value = stats.get(m)
-                    submit_method, metric_name_alias = self._resolve_metric('collection.%s' % m, metrics_to_collect)
+                    value = None
+                    try:
+                        for c in m:
+                            if value is not None:
+                                value = value[c]
+                            else:
+                                value = stats[c]
+                    except Exception:
+                        continue
+
+                    submit_method, metric_name_alias = self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
                     submit_method(self, metric_name_alias, value, tags=coll_tags)
-        except Exception:
+        except Exception as e:
+            self.log.exception(e)
             self.log.warning(u"Failed to record `collection` metrics.")
