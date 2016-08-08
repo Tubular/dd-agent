@@ -335,6 +335,13 @@ class MongoDb(AgentCheck):
         "writeLock.time": GAUGE,
     }
 
+    COLLECTION_METRICS = {
+        'collection.totalIndexSize': GAUGE,
+        'collection.size': GAUGE,
+        'collection.avgObjSize': GAUGE,
+        'collection.count': GAUGE,
+    }
+
     """
     Mapping for case-sensitive metric name suffixes.
 
@@ -355,6 +362,7 @@ class MongoDb(AgentCheck):
         'durability': DURABILITY_METRICS,
         'locks': LOCKS_METRICS,
         'wiredtiger': WIREDTIGER_METRICS,
+        'collection': COLLECTION_METRICS,
     }
 
     """
@@ -508,7 +516,6 @@ class MongoDb(AgentCheck):
         submit_method = metrics_to_collect[original_metric_name][0] \
             if isinstance(metrics_to_collect[original_metric_name], tuple) \
             else metrics_to_collect[original_metric_name]
-
         metric_name = metrics_to_collect[original_metric_name][1] \
             if isinstance(metrics_to_collect[original_metric_name], tuple) \
             else original_metric_name
@@ -875,3 +882,19 @@ class MongoDb(AgentCheck):
 
         else:
             self.log.debug('"local" database not in dbnames. Not collecting ReplicationInfo metrics')
+
+        # get collection level stats
+        try:
+            db = cli[db_name]
+            coll_names = db.collection_names()
+            collection_metrics = ['totalIndexSize','size','avgObjSize','count',]
+
+            for coll_name in coll_names:
+                coll_tags = tags + ["db:%s" % db_name, "collection:%s" % coll_name]
+                stats = db.command("collstats", coll_name)
+                for m in collection_metrics:
+                    value = stats.get(m)
+                    submit_method, metric_name_alias = self._resolve_metric('collection.%s' % m, metrics_to_collect)
+                    submit_method(self, metric_name_alias, value, tags=coll_tags)
+        except Exception:
+            self.log.warning(u"Failed to record `collection` metrics.")
