@@ -156,7 +156,7 @@ class TestMongoUnit(AgentCheckTest):
 @attr(requires='mongo')
 class TestMongo(unittest.TestCase):
     def setUp(self):
-        self.config = {
+        config = {
             'instances': [{
                 'server': "mongodb://localhost:%s/test" % PORT1
             }, {
@@ -164,7 +164,7 @@ class TestMongo(unittest.TestCase):
             }]
         }
 
-        server = self.config['instances'][0]['server']
+        server = config['instances'][0]['server']
 
         parsed = pymongo.uri_parser.parse_uri(server)
         db_name = parsed.get('database')
@@ -184,7 +184,14 @@ class TestMongo(unittest.TestCase):
         bar.insert_one({})
 
     def tearDown(self):
-        server = self.config['instances'][0]['server']
+        config = {
+            'instances': [{
+                'server': "mongodb://localhost:%s/test" % PORT1
+            }, {
+                'server': "mongodb://localhost:%s/test" % PORT2
+            }]
+        }
+        server = config['instances'][0]['server']
 
         parsed = pymongo.uri_parser.parse_uri(server)
         db_name = parsed.get('database')
@@ -201,6 +208,14 @@ class TestMongo(unittest.TestCase):
         self.agentConfig = {
             'version': '0.1',
             'api_key': 'toto'
+        }
+
+        self.config = {
+            'instances': [{
+                'server': "mongodb://localhost:%s/test" % PORT1
+            }, {
+                'server': "mongodb://localhost:%s/test" % PORT2
+            }]
         }
 
         # Test mongodb with checks.d
