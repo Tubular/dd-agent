@@ -70,16 +70,6 @@ namespace :ci do
       sh %(#{mongo_rootdir}/bin/mongo\
            --eval "printjson(rs.config()); printjson(rs.status());" 'localhost:37018'\
             >> $VOLATILE_DIR/mongo.log)
-
-      bar_cmd = 'db.bar.save({1: []}); db.bar.save({})'
-      foo_cmd = 'db.foo.save({1: []}); db.foo.save({}); db.foo.save({1: []});'
-      sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "#{bar_cmd}" 'localhost:37017/test'\
-           >> $VOLATILE_DIR/mongo.log)
-      sh %(#{mongo_rootdir}/bin/mongo\
-          --eval "#{foo_cmd}" 'localhost:37017/test'\
-          >> $VOLATILE_DIR/mongo.log)
-      sleep_for 30
     end
 
     task script: ['ci:common:script'] do

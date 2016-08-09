@@ -367,7 +367,6 @@ class MongoDb(AgentCheck):
         'durability': DURABILITY_METRICS,
         'locks': LOCKS_METRICS,
         'wiredtiger': WIREDTIGER_METRICS,
-        'collection': COLLECTION_METRICS,
     }
 
     """
@@ -377,6 +376,7 @@ class MongoDb(AgentCheck):
         'metrics.commands': COMMANDS_METRICS,
         'tcmalloc': TCMALLOC_METRICS,
         'top': TOP_METRICS,
+        'collection': COLLECTION_METRICS,
     }
 
     # Replication states
@@ -406,6 +406,10 @@ class MongoDb(AgentCheck):
 
         # List of metrics to collect per instance
         self.metrics_to_collect_by_instance = {}
+
+        self.collection_metrics_names = []
+        for (key, value) in self.COLLECTION_METRICS.iteritems():
+            self.collection_metrics_names.append(key.split('.')[1])
 
     def get_library_versions(self):
         return {"pymongo": pymongo.version}
@@ -589,6 +593,12 @@ class MongoDb(AgentCheck):
         clean_server_name = server.replace(password, "*" * 5) if password is not None else server
 
         additional_metrics = instance.get('additional_metrics', [])
+
+        # collections are enabled on a per collection basis,
+        # so if they enable one, then the metrics are enabled.
+        collections = instance.get('collections', [])
+        if len(collections) > 0:
+            additional_metrics = additional_metrics + ['collection']
 
         tags = instance.get('tags', [])
         tags.append('server:%s' % clean_server_name)
@@ -894,42 +904,27 @@ class MongoDb(AgentCheck):
             db = cli[db_name]
             # grab the collections from the database
             coll_names = db.collection_names()
-            collection_metrics = []
-            for m in self.COLLECTION_METRICS:
-                # grab all the collections
-                collection_metrics.append(m.split('.')[1:])
-
             # loop through the collections
             for coll_name in coll_names:
                 # grab the stats from the collection
                 stats = db.command("collstats", coll_name)
                 # loop through the metrics
-                for m in collection_metrics:
+                for m in self.collection_metrics_names:
                     coll_tags = tags + ["db:%s" % db_name, "collection:%s" % coll_name]
-                    value = None
-                    try:
-                        # descend into the dict to grab the value we're looking for
-                        for c in m:
-                            if value is not None:
-                                value = value[c]
-                            else:
-                                value = stats[c]
-                    except Exception:
-                        continue
+                    value = stats[m]
 
-                    # if the value is a dict, then it's the index stats
-                    if isinstance(value, dict):
+                    # if it's the index sizes, then it's a dict.
+                    if m == 'indexSizes':
                         # loop through the indexes
                         for (idx, val) in value.iteritems():
                             # we tag the index
                             idx_tags = coll_tags + ["index:%s" % idx]
                             submit_method, metric_name_alias = \
-                                self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
+                                self._resolve_metric('collection.%s' % m, metrics_to_collect)
                             submit_method(self, metric_name_alias, val, tags=idx_tags)
 
                     submit_method, metric_name_alias = \
                         self._resolve_metric('collection.%s' % '.'.join(m), metrics_to_collect)
                     submit_method(self, metric_name_alias, value, tags=coll_tags)
         except Exception as e:
-            self.log.exception(e)
             self.log.warning(u"Failed to record `collection` metrics.")

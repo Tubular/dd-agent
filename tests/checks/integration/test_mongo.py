@@ -6,6 +6,7 @@ import unittest
 # 3p
 from mock import Mock
 from nose.plugins.attrib import attr
+import pymongo
 
 # project
 from checks import AgentCheck
@@ -155,18 +156,39 @@ class TestMongoUnit(AgentCheckTest):
 
 @attr(requires='mongo')
 class TestMongo(unittest.TestCase):
-    def testMongoCheck(self):
-        self.agentConfig = {
-            'version': '0.1',
-            'api_key': 'toto'
-        }
-
+    def setUp(self):
         self.config = {
             'instances': [{
                 'server': "mongodb://localhost:%s/test" % PORT1
             }, {
                 'server': "mongodb://localhost:%s/test" % PORT2
             }]
+        }
+
+        server = self.config['instances'][0]['server']
+
+        parsed = pymongo.uri_parser.parse_uri(server)
+        db_name = parsed.get('database')
+        cli = pymongo.mongo_client.MongoClient(
+            server,
+            socketTimeoutMS=10,
+            read_preference=pymongo.ReadPreference.PRIMARY_PREFERRED,)
+
+        db = cli[db_name]
+        foo = db.foo
+        foo.insert_one({'1': []})
+        foo.insert_one({'1': []})
+        foo.insert_one({})
+
+        bar = db.bar
+        bar.insert_one({'1': []})
+        bar.insert_one({})
+
+
+    def testMongoCheck(self):
+        self.agentConfig = {
+            'version': '0.1',
+            'api_key': 'toto'
         }
 
         # Test mongodb with checks.d
