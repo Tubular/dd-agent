@@ -184,6 +184,19 @@ class TestMongo(unittest.TestCase):
         bar.insert_one({'1': []})
         bar.insert_one({})
 
+    def tearDown(self):
+        server = self.config['instances'][0]['server']
+
+        parsed = pymongo.uri_parser.parse_uri(server)
+        db_name = parsed.get('database')
+        cli = pymongo.mongo_client.MongoClient(
+            server,
+            socketTimeoutMS=10,
+            read_preference=pymongo.ReadPreference.PRIMARY_PREFERRED,)
+
+        db = cli[db_name]
+        db.drop_collection("foo")
+        db.drop_collection("bar")
 
     def testMongoCheck(self):
         self.agentConfig = {
