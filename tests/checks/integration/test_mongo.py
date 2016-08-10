@@ -156,24 +156,13 @@ class TestMongoUnit(AgentCheckTest):
 @attr(requires='mongo')
 class TestMongo(unittest.TestCase):
     def setUp(self):
-        config = {
-            'instances': [{
-                'server': "mongodb://localhost:%s/test" % PORT1
-            }, {
-                'server': "mongodb://localhost:%s/test" % PORT2
-            }]
-        }
-
-        server = config['instances'][0]['server']
-
-        parsed = pymongo.uri_parser.parse_uri(server)
-        db_name = parsed.get('database')
+        server = "mongodb://localhost:%s/test" % PORT1
         cli = pymongo.mongo_client.MongoClient(
             server,
-            socketTimeoutMS=10,
+            socketTimeoutMS=30000,
             read_preference=pymongo.ReadPreference.PRIMARY_PREFERRED,)
 
-        db = cli[db_name]
+        db = cli['test']
         foo = db.foo
         foo.insert_one({'1': []})
         foo.insert_one({'1': []})
@@ -184,23 +173,13 @@ class TestMongo(unittest.TestCase):
         bar.insert_one({})
 
     def tearDown(self):
-        config = {
-            'instances': [{
-                'server': "mongodb://localhost:%s/test" % PORT1
-            }, {
-                'server': "mongodb://localhost:%s/test" % PORT2
-            }]
-        }
-        server = config['instances'][0]['server']
-
-        parsed = pymongo.uri_parser.parse_uri(server)
-        db_name = parsed.get('database')
+        server = "mongodb://localhost:%s/test" % PORT1
         cli = pymongo.mongo_client.MongoClient(
             server,
-            socketTimeoutMS=10,
+            socketTimeoutMS=30000,
             read_preference=pymongo.ReadPreference.PRIMARY_PREFERRED,)
 
-        db = cli[db_name]
+        db = cli['test']
         db.drop_collection("foo")
         db.drop_collection("bar")
 
