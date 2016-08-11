@@ -5,7 +5,8 @@
 require './ci/common'
 
 def mongo_version
-  ENV['FLAVOR_VERSION'] || '3.0.1' # '2.6.9'
+  # We test on '2.6.9' and 3.0.1
+  ENV['FLAVOR_VERSION'] || '3.0.1'
 end
 
 def mongo_rootdir
@@ -58,29 +59,22 @@ namespace :ci do
       Wait.for 37_017, 10
       Wait.for 37_018
       sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "printjson(db.serverStatus())" 'localhost:37017'\
-           >> $VOLATILE_DIR/mongo1.log)
+           --eval "printjson(db.serverStatus())" 'localhost:37017' >> $VOLATILE_DIR/mongo1.log)
       sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "printjson(db.serverStatus())" 'localhost:37018'\
-           >> $VOLATILE_DIR/mongo2.log)
+           --eval "printjson(db.serverStatus())" 'localhost:37018' >> $VOLATILE_DIR/mongo2.log)
       sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "printjson(rs.initiate()); printjson(rs.conf());" 'localhost:37017'\
-           >> $VOLATILE_DIR/mongo1.log)
+           --eval "printjson(rs.initiate()); printjson(rs.conf());" 'localhost:37017' >> $VOLATILE_DIR/mongo1.log)
       sh %(#{mongo_rootdir}/bin/mongo\
            --eval "cfg = rs.conf(); cfg.members[0].host = '#{hostname}:37017';\
-           rs.reconfig(cfg); printjson(rs.conf());" 'localhost:37017'\
-           >> $VOLATILE_DIR/mongo1.log)
+           rs.reconfig(cfg); printjson(rs.conf());" 'localhost:37017' >> $VOLATILE_DIR/mongo1.log)
       sh %(#{mongo_rootdir}/bin/mongo\
            --eval "printjson(rs.add('#{hostname}:37018'));\
-           printjson(rs.status());" 'localhost:37017'\
-           >> $VOLATILE_DIR/mongo1.log)
+           printjson(rs.status());" 'localhost:37017' >> $VOLATILE_DIR/mongo1.log)
       sleep_for 30
       sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "printjson(rs.config()); printjson(rs.status());" 'localhost:37017'\
-           >> $VOLATILE_DIR/mongo1.log)
+           --eval "printjson(rs.config()); printjson(rs.status());" 'localhost:37017' >> $VOLATILE_DIR/mongo1.log)
       sh %(#{mongo_rootdir}/bin/mongo\
-           --eval "printjson(rs.config()); printjson(rs.status());" 'localhost:37018'\
-            >> $VOLATILE_DIR/mongo2.log)
+           --eval "printjson(rs.config()); printjson(rs.status());" 'localhost:37018' >> $VOLATILE_DIR/mongo2.log)
     end
 
     task script: ['ci:common:script'] do
