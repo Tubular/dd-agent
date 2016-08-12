@@ -6,7 +6,7 @@ require './ci/common'
 
 def mongo_version
   # We test on '2.6.9' and 3.0.1
-  ENV['FLAVOR_VERSION'] || '3.0.1' #'2.6.9'
+  ENV['FLAVOR_VERSION'] || '3.0.1'
 end
 
 def mongo_rootdir
