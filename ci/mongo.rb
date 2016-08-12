@@ -67,6 +67,8 @@ namespace :ci do
            --eval "printjson(rs.initiate()); printjson(rs.conf());" '#{hostname}:37017' \
            >> $VOLATILE_DIR/mongo1.log)
 
+      # mongo 2 takes longer to spin up than mongo 3. Without this wait,
+      # it will all break because it takes too long to come up.
       sleep_for 30
       sh %(#{mongo_rootdir}/bin/mongo\
            --eval "cfg = rs.conf(); cfg.members[0].host = '#{hostname}:37017';\
